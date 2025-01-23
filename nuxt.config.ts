@@ -1,5 +1,6 @@
 import path from 'node:path'
 // https://nuxt.com/docs/api/configuration/nuxt-config
+// eslint-disable-next-line no-undef
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
@@ -16,5 +17,13 @@ export default defineNuxtConfig({
   alias: {
     '@': path.resolve(__dirname, 'src'),
   },
-  modules: ['@unocss/nuxt', '@nuxtjs/robots', '@nuxtjs/seo'],
+  modules: [
+    '@unocss/nuxt',
+    '@nuxtjs/robots',
+    '@nuxtjs/seo',
+    '@nuxtjs/i18n',
+  ],
+  css: [
+    'normalize.css',
+  ],
 })

@@ -11,8 +11,10 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@nuxtjs/i18n": "9.1.2",
     "@nuxtjs/robots": "5.2.2",
     "@nuxtjs/seo": "2.1.0",
+    "normalize.css": "^8.0.1",
     "nuxt": "^3.15.2",
     "vue": "latest",
     "vue-router": "latest"
