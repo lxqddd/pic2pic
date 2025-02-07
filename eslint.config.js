@@ -6,4 +6,7 @@ export default antfu({
   rules: {
     'no-console': 'off',
   },
+  globals: {
+    $t: 'readonly',
+  },
 })
