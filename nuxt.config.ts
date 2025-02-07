@@ -22,6 +22,7 @@ export default defineNuxtConfig({
     '@nuxtjs/robots',
     '@nuxtjs/seo',
     '@nuxtjs/i18n',
+    '@element-plus/nuxt',
   ],
   i18n: {
     vueI18n: './i18n.config.ts',
