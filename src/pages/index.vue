@@ -1,19 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
-import type { UploadFile } from "element-plus"
+import {ref} from 'vue'
+import {useI18n} from 'vue-i18n'
+import type {UploadFile, UploadRawFile} from "element-plus"
 import html2canvas from 'html2canvas'
-import { Ico } from 'icojs'
+import axios from "axios";
 
-const { t } = useI18n()
+const {t} = useI18n()
 
 const imageType = ['png', 'jpg', 'webp', 'ico']
 
 const curType = ref('png')
 const curImageUrl = ref('')
+const curFile = ref<UploadRawFile>()
 const handleSelectImage = (file: UploadFile) => {
   console.log(file)
   curImageUrl.value = URL.createObjectURL(file.raw!)
+  curFile.value = file.raw!
 }
 
 const sourceImageRef = ref<HTMLImageElement>()
@@ -21,15 +23,89 @@ const targetImageUrl = ref('')
 const handleTransform = async () => {
   // const canvas = await html2canvas(sourceImageRef.value!)
   // targetImageUrl.value = canvas.toDataURL(`image/${curType.value}`)
-  imgToIcon()
+  await imgToIcon()
 }
 
-const imgToIcon = () => {
-  const ico = new Ico()
-  ico.add('favicon.ico', sourceImageRef.value!.src)
-  const blob = new Blob([ico.buffer], { type: 'image/x-icon' })
-  const url = URL.createObjectURL(blob)
-  targetImageUrl.value = url
+const imgToIcon = async () => {
+  try {
+    const targetSize = 64
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')!
+    canvas.width = targetSize
+    canvas.height = targetSize
+    const scale = Math.min(targetSize / sourceImageRef.value!.width, targetSize / sourceImageRef.value!.height)
+    const x = (targetSize - sourceImageRef.value!.width * scale) / 2
+    const y = (targetSize - sourceImageRef.value!.height * scale) / 2
+    ctx.clearRect(0, 0, targetSize, targetSize)
+    ctx.drawImage(sourceImageRef.value!, x, y, sourceImageRef.value!.width * scale, sourceImageRef.value!.height * scale)
+    const imageData = canvas.toDataURL('image/png')
+    const imgBuffer = imageToBuffer(imageData)
+    const icoBuffer = generateIco(imgBuffer, targetSize)
+    const blob = new Blob([icoBuffer], {type: 'image/x-icon'})
+    console.log(imgBuffer, 'image url')
+    targetImageUrl.value = URL.createObjectURL(blob)
+
+  } catch (e) {
+    console.log(e)
+  }
+}
+
+const imageToBuffer = (dataURL: string): Uint8Array => {
+  const byteString = atob(dataURL.split(',')[1]);
+  const buffer = new Uint8Array(byteString.length);
+  for (let i = 0; i < byteString.length; i++) {
+    buffer[i] = byteString.charCodeAt(i);
+  }
+  return buffer;
+}
+
+const generateIco = (buffer: Uint8Array, size: number) => {
+  const header = new Uint8Array(6);
+  header[0] = 0; // Reserved
+  header[1] = 0; // Reserved
+  header[2] = 1; // Type (1 = ICO)
+  header[3] = 1; // Number of images (1 image)
+  header[4] = 1; // Number of images
+  header[5] = 0; // Total number of images
+
+  // 图标头部：16 字节
+  const imageHeader = new Uint8Array(16);
+  imageHeader[0] = size; // 宽度
+  imageHeader[1] = size; // 高度
+  imageHeader[2] = 0; // 颜色数
+  imageHeader[3] = 0; // 保留
+  imageHeader[4] = 0; // 平面数
+  imageHeader[5] = 32; // 位深度
+  imageHeader[6] = 0; // 压缩方法
+  imageHeader[7] = 0;
+  imageHeader[8] = buffer.length & 0xFF; // 图像数据大小（低位）
+  imageHeader[9] = (buffer.length >> 8) & 0xFF; // 图像数据大小（高位）
+  imageHeader[10] = 0; // 图像偏移（这里不使用）
+  imageHeader[11] = 0;
+
+  // 合并文件头和图标数据
+  const finalBuffer = new Uint8Array(6 + imageHeader.length + buffer.length);
+  finalBuffer.set(header, 0);
+  finalBuffer.set(imageHeader, 6);
+  finalBuffer.set(buffer, 22);
+
+  return finalBuffer;
+}
+
+const handleUpload = async (file: UploadFile) => {
+  const formData = new FormData()
+  formData.append('image', file)
+  try {
+    const res = await axios.post('/api/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      responseType: 'blob'
+    })
+    console.log(res)
+  } catch (e) {
+    console.log(e)
+  }
 }
 
 </script>
@@ -56,9 +132,9 @@ const imgToIcon = () => {
               class="upload-demo"
               drag
               accept="image/*"
-              :auto-upload="false"
               :show-file-list="false"
               :on-change="handleSelectImage"
+              :http-request="handleUpload"
             >
               <img v-if="curImageUrl" ref="sourceImageRef" :src="curImageUrl" alt="源文件" class="w-80">
               <div v-else class="el-upload__text">
